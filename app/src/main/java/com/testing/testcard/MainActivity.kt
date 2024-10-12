@@ -11,9 +11,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.testing.testcard.domain.repository.CartRepository
 import com.testing.testcard.ui.theme.TestCardTheme
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var cartRepository: CartRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -21,7 +29,7 @@ class MainActivity : ComponentActivity() {
             TestCardTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
-                        name = "Android",
+                        name = "TestCard Shopping Cart System",
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -33,7 +41,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
-        text = "Hello $name!",
+        text = "Welcome to $name!",
         modifier = modifier
     )
 }
@@ -42,6 +50,6 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Composable
 fun GreetingPreview() {
     TestCardTheme {
-        Greeting("Android")
+        Greeting("TestCard Shopping Cart System")
     }
 }
