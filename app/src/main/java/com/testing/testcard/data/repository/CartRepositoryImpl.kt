@@ -22,10 +22,10 @@ class CartRepositoryImpl(
         }
     }
 
-    override fun applyDiscount(cart: ShoppingCart, discount: Discount) {
-        val productInCart = cart.items.find { it.product.id == discount.productId }
+    override fun applyDiscount(discount: Discount) {
+        val productInCart = shoppingCart.items.find { it.product.id == discount.productId }
         if (productInCart != null) {
-            cart.appliedDiscounts.add(discount)
+            shoppingCart.appliedDiscounts.add(discount)
         }
     }
 

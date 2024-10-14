@@ -5,7 +5,6 @@ import com.testing.testcard.data.repository.CartRepositoryImpl
 import com.testing.testcard.domain.model.Category
 import com.testing.testcard.domain.model.Discount
 import com.testing.testcard.domain.model.Product
-import com.testing.testcard.domain.model.ShoppingCart
 import junit.framework.TestCase.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -50,12 +49,17 @@ class CartRepositoryTest {
     fun `should apply discount to product in cart when applyDiscount is called`() {
         // Arrange
         cartRepository.addProduct(product, 1)
-        val discount = Discount(productId = product.id, categoryId = category.id, type = DiscountType.PERCENTAGE, value = 10.0)
+        val discount = Discount(
+            productId = product.id,
+            categoryId = category.id,
+            type = DiscountType.PERCENTAGE,
+            value = 10.0,
+            requiredQuantity = 0,
+            requiredItems = listOf()
+        )
 
-        // Act
-        cartRepository.applyDiscount(cartRepository.getCart(), discount)
+        cartRepository.applyDiscount(discount)
 
-        // Assert
         val cart = cartRepository.getCart()
         assertEquals(1, cart.appliedDiscounts.size)
         assertEquals(discount, cart.appliedDiscounts[0])

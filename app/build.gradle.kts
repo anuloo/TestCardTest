@@ -66,6 +66,7 @@ dependencies {
     kapt(libs.hilt.compiler)
     //Unit test
     testImplementation(libs.junit)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.mockk)
     //Integration test
     androidTestImplementation(libs.androidx.junit)

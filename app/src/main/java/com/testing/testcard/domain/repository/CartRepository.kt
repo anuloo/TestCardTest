@@ -6,6 +6,6 @@ import com.testing.testcard.domain.model.ShoppingCart
 
 interface CartRepository {
     fun addProduct(product: Product, quantity: Int)
-    fun applyDiscount(cart: ShoppingCart, discount: Discount)
+    fun applyDiscount(discount: Discount)
     fun getCart(): ShoppingCart
 }
