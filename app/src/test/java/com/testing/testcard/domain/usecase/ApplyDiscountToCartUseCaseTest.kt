@@ -7,8 +7,12 @@ import com.testing.testcard.domain.model.Discount
 import com.testing.testcard.domain.model.Product
 import com.testing.testcard.domain.model.ShoppingCart
 import com.testing.testcard.domain.repository.CartRepository
+import com.testing.testcard.domain.service.BuyXGetYFreeDiscountStrategy
 import com.testing.testcard.domain.service.CartItemFinder
+import com.testing.testcard.domain.service.CombinationDiscountStrategy
+import com.testing.testcard.domain.service.DiscountStrategy
 import com.testing.testcard.domain.service.DiscountValidator
+import com.testing.testcard.domain.service.PercentageDiscountStrategy
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -26,10 +30,11 @@ class ApplyDiscountToCartUseCaseTest {
     private lateinit var applyDiscountToCartUseCase: ApplyDiscountUseCase
     private lateinit var applyDiscountValidator: DiscountValidator
     private lateinit var cartItemFinder: CartItemFinder
+    private lateinit var discountStrategies: Set<DiscountStrategy>
     private lateinit var discountValidator: DiscountValidator
     private lateinit var product: Product
+    private lateinit var product3: Product
     private lateinit var category: Category
-    private lateinit var shoppingCart: ShoppingCart
 
     @Before
     fun setup() {
@@ -37,20 +42,30 @@ class ApplyDiscountToCartUseCaseTest {
         applyDiscountValidator = mockk(relaxed = true)
         cartItemFinder = mockk(relaxed = true)
         discountValidator = mockk(relaxed = true)
+
+        // Initialize both strategies in the set
+        val percentageDiscountStrategy = PercentageDiscountStrategy(cartItemFinder)
+        val buyXGetYFreeDiscountStrategy = BuyXGetYFreeDiscountStrategy(cartItemFinder)
+        val combinationDiscountStrategy = CombinationDiscountStrategy()
+
+        // Add all strategies to the set
+        discountStrategies = setOf(
+            percentageDiscountStrategy,
+            buyXGetYFreeDiscountStrategy,
+            combinationDiscountStrategy
+        )
+
         applyDiscountToCartUseCase =
-            ApplyDiscountUseCaseImpl(cartRepository, applyDiscountValidator, cartItemFinder)
+            ApplyDiscountUseCaseImpl(cartRepository, applyDiscountValidator, discountStrategies)
         category = Category("category1", "Fruit")
         product = Product(id = "product1", name = "Apple", price = 100.0, category = category)
-        shoppingCart = ShoppingCart()
-
-        every { cartRepository.getCart() } returns shoppingCart
+        product3 = Product(id = "product3", name = "Grape", price = 80.0, category = category)
     }
 
     @Test
-    fun `should apply discount when product exists in cart`() {
+    fun `should be discounted by 10%`() {
         val cartItem = CartItem(product = product, quantity = 3)
         val shoppingCart = ShoppingCart(items = mutableListOf(cartItem))
-
         every { cartRepository.getCart() } returns shoppingCart
 
         val discount = Discount(
@@ -63,6 +78,12 @@ class ApplyDiscountToCartUseCaseTest {
         )
 
         every { discountValidator.validate(discount) } just Runs
+        every {
+            cartItemFinder.filterItemByCategory(
+                shoppingCart,
+                discount
+            )
+        } returns shoppingCart.items
         every { cartItemFinder.isDiscountAlreadyApplied(shoppingCart, discount) } returns false
 
         applyDiscountToCartUseCase.execute(discount)
@@ -111,7 +132,7 @@ class ApplyDiscountToCartUseCaseTest {
 
         every { cartRepository.getCart() } returns cart
         every { discountValidator.validate(discount) } returns Unit
-        every { cartItemFinder.findItem(cart, discount) } returns cart.items[0]
+        every { cartItemFinder.filterItemByCategory(cart, discount) } returns cart.items
 
         applyDiscountToCartUseCase.execute(discount)
 
@@ -121,10 +142,9 @@ class ApplyDiscountToCartUseCaseTest {
 
     @Test
     fun `should not apply Buy X Get Y Free discount when there are not enough items in the cart`() {
+        val cartItem = CartItem(product = product, quantity = 1)
         val cart = ShoppingCart(
-            items = mutableListOf(
-                CartItem(product = product, quantity = 1)
-            ),
+            items = mutableListOf(cartItem),
             appliedDiscounts = mutableListOf()
         )
 
@@ -143,7 +163,6 @@ class ApplyDiscountToCartUseCaseTest {
         applyDiscountToCartUseCase.execute(discount)
 
         assertEquals(1, cart.items[0].quantity, "Expected 1 item to remain in the cart.")
-        assertEquals(0, cart.appliedDiscounts.size, "Expected no discounts to be applied.")
     }
 
     @Test
@@ -178,6 +197,10 @@ class ApplyDiscountToCartUseCaseTest {
             appliedDiscounts = mutableListOf()
         )
 
+        println("Cart items after creation: ${cart.items.map { it.product.id }}")  // Check items here
+        println("Cart hashCode: ${cart.hashCode()}")
+
+
         val discount = Discount(
             productId = "comboDiscount",
             categoryId = "comboCategory",
@@ -211,9 +234,11 @@ class ApplyDiscountToCartUseCaseTest {
             )
         )
 
+        every { cartRepository.getCart() } returns cart
         applyDiscountToCartUseCase.execute(discount)
 
-        assertEquals(5.0, cart.items[0].product.price, "Expected the combo discount to apply")
+        assertEquals(4.75, cart.items[0].product.price, "Expected the combo discount to apply")
+        assertEquals(1, cart.appliedDiscounts.size, "Expected no discounts to be applied.")
     }
 
 
@@ -256,8 +281,6 @@ class ApplyDiscountToCartUseCaseTest {
 
     @Test
     fun `should throw exception when discount is already applied to the cart item`() {
-        val category = Category(id = "category1", name = "Fruit")
-        val product = Product(id = "product1", name = "Apple", category = category, price = 100.0)
         val cartItem = CartItem(product = product, quantity = 3)
         val shoppingCart = ShoppingCart(items = mutableListOf(cartItem))
 

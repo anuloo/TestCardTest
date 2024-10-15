@@ -2,8 +2,12 @@ package com.testing.testcard.di
 
 import com.testing.testcard.data.repository.CartRepositoryImpl
 import com.testing.testcard.domain.repository.CartRepository
+import com.testing.testcard.domain.service.BuyXGetYFreeDiscountStrategy
 import com.testing.testcard.domain.service.CartItemFinder
+import com.testing.testcard.domain.service.CombinationDiscountStrategy
+import com.testing.testcard.domain.service.DiscountStrategy
 import com.testing.testcard.domain.service.DiscountValidator
+import com.testing.testcard.domain.service.PercentageDiscountStrategy
 import com.testing.testcard.domain.usecase.AddProductToCartUseCase
 import com.testing.testcard.domain.usecase.AddProductToCartUseCaseImpl
 import com.testing.testcard.domain.usecase.ApplyDiscountUseCase
@@ -46,11 +50,29 @@ object CartModule {
 
     @Provides
     @Singleton
+    fun providePercentageDiscountStrategy(cartItemFinder: CartItemFinder): DiscountStrategy {
+        return PercentageDiscountStrategy(cartItemFinder)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBuyXGetYFreeDiscountStrategy(cartItemFinder: CartItemFinder): DiscountStrategy {
+        return BuyXGetYFreeDiscountStrategy(cartItemFinder)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCombinationDiscountStrategy(): DiscountStrategy {
+        return CombinationDiscountStrategy()
+    }
+
+    @Provides
+    @Singleton
     fun provideApplyDiscountUseCase(
         cartRepository: CartRepository,
         discountValidator: DiscountValidator,
-        cartItemFinder: CartItemFinder
+        discountStrategies: Set<DiscountStrategy>
     ): ApplyDiscountUseCase {
-        return ApplyDiscountUseCaseImpl(cartRepository, discountValidator, cartItemFinder)
+        return ApplyDiscountUseCaseImpl(cartRepository, discountValidator, discountStrategies)
     }
 }
